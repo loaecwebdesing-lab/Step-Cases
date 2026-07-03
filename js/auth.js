@@ -9,6 +9,8 @@ const GUEST_SAVE_KEY = "stepcases-guest-v1";
 
 const AVATAR_EMOJIS = ["🦊", "🐺", "🐲", "🦅", "🐯", "👽", "🤖", "💀", "🔥", "⚡", "🎯", "👑"];
 const AVATAR_COLORS = ["#ff6b35", "#4b69ff", "#8847ff", "#d32ce6", "#eb4b4b", "#2ecc71", "#00c3ff", "#ffd700"];
+window.AVATAR_EMOJIS = AVATAR_EMOJIS;
+window.AVATAR_COLORS = AVATAR_COLORS;
 
 let authUser = null; /* { id, name, avatarEmoji, avatarColor, created } */
 let authReady = false;
@@ -81,24 +83,33 @@ function authStoreLocal(reg) {
   localStorage.setItem(AUTH_KEY, JSON.stringify(reg));
 }
 
+function authTimeout(ms) {
+  return new Promise((resolve) => setTimeout(() => resolve(null), ms));
+}
+
 async function initAuth() {
-  if (useCloud()) {
-    const session = await dbGetSession();
-    if (session?.user) {
-      try {
-        const row = await dbFetchProfile(session.user.id);
-        authUser = rowToUser(row);
-      } catch (e) {
-        console.error("Profile load failed:", e);
-        await dbSignOut();
+  try {
+    if (useCloud()) {
+      const session = await Promise.race([dbGetSession(), authTimeout(6000)]);
+      if (session?.user) {
+        try {
+          const row = await Promise.race([dbFetchProfile(session.user.id), authTimeout(6000)]);
+          if (row) authUser = rowToUser(row);
+          else dbSignOut().catch(() => {});
+        } catch (e) {
+          console.error("Profile load failed:", e);
+          dbSignOut().catch(() => {});
+        }
+      }
+    } else {
+      authReg = authLoadLocal();
+      if (authReg.current && authReg.users[authReg.current]) {
+        const u = authReg.users[authReg.current];
+        authUser = { id: authReg.current, name: u.name, avatarEmoji: u.avatarEmoji, avatarColor: u.avatarColor, created: u.created };
       }
     }
-  } else {
-    authReg = authLoadLocal();
-    if (authReg.current && authReg.users[authReg.current]) {
-      const u = authReg.users[authReg.current];
-      authUser = { id: authReg.current, name: u.name, avatarEmoji: u.avatarEmoji, avatarColor: u.avatarColor, created: u.created };
-    }
+  } catch (e) {
+    console.error("initAuth error:", e);
   }
   authReady = true;
 }

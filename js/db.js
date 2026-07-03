@@ -178,5 +178,9 @@ async function dbSignIn(username, password) {
 
 async function dbSignOut() {
   const client = getClient();
-  if (client) await client.auth.signOut();
+  if (!client) return;
+  await Promise.race([
+    client.auth.signOut(),
+    new Promise((resolve) => setTimeout(resolve, 3000)),
+  ]);
 }

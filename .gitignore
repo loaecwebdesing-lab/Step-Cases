@@ -4,6 +4,9 @@ node_modules/
 # Supabase / Netlify secrets (generated at build on Netlify)
 js/config.js
 
+# Deploy artifacts
+stepcases-site.zip
+
 # OS
 .DS_Store
 Thumbs.db

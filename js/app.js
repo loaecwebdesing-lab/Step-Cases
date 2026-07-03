@@ -2,10 +2,8 @@
    STEP CASES — Game logic
    ===================================================== */
 
-const START_BALANCE = 10;
 const BONUS_AMOUNT = 5;
 const BONUS_COOLDOWN = 60_000; // 60s
-const GUEST_SAVE_KEY = "stepcases-guest-v1";
 
 /* ---------- State ---------- */
 let state = defaultState();
@@ -17,7 +15,7 @@ let resultsHandled = false;
 
 function defaultState() {
   return typeof defaultGameState === "function" ? defaultGameState() : {
-    balance: START_BALANCE,
+    balance: 10,
     inventory: [],
     stats: { opened: 0, spent: 0, won: 0, bestDrop: null, knives: 0, gloves: 0, battles: 0, battlesWon: 0, upgrades: 0, upgradesWon: 0 },
     lastBonus: 0,
@@ -34,7 +32,7 @@ async function loadState() {
       console.error("Cloud load failed:", e);
     }
   }
-  const localKey = isLoggedIn() ? "arena-save-" + authUserId() : GUEST_SAVE_KEY;
+  const localKey = isLoggedIn() ? "arena-save-" + authUserId() : "stepcases-guest-v1";
   try {
     const raw = localStorage.getItem(localKey);
     if (raw) return Object.assign(defaultState(), JSON.parse(raw));
@@ -47,7 +45,7 @@ function saveState() {
     scheduleCloudSave(authUserId(), state);
     return;
   }
-  const localKey = isLoggedIn() ? "arena-save-" + authUserId() : GUEST_SAVE_KEY;
+  const localKey = isLoggedIn() ? "arena-save-" + authUserId() : "stepcases-guest-v1";
   localStorage.setItem(localKey, JSON.stringify(state));
 }
 
@@ -63,40 +61,61 @@ function addXp(amount) {
   renderUserChip();
 }
 
-/* ---------- Helpers ---------- */
-const $ = (sel) => document.querySelector(sel);
-const fmt = (n) => "$" + n.toFixed(2);
+/* ---------- Helpers (function = global, shared across script files) ---------- */
+function $(sel) { return document.querySelector(sel); }
+function fmt(n) { return "$" + n.toFixed(2); }
 
-const ALL_CASES = [
-  ...CASES,
-  ...(typeof EXCLUSIVE_CASES !== "undefined" ? EXCLUSIVE_CASES : []),
-  ...(typeof CS2_CASES !== "undefined" ? CS2_CASES : []),
-];
+function buildAllCases() {
+  return [
+    ...(window.CASES || []),
+    ...(window.EXCLUSIVE_CASES || []),
+    ...(window.CS2_CASES || []),
+  ];
+}
+
+let ALL_CASES = buildAllCases();
+window.ALL_CASES = ALL_CASES;
+
+function refreshAllCases() {
+  ALL_CASES = buildAllCases();
+  window.ALL_CASES = ALL_CASES;
+}
+
+function loadCs2Data() {
+  if (window.CS2_CASES) return Promise.resolve();
+  return new Promise((resolve) => {
+    const s = document.createElement("script");
+    s.src = "js/cs2data.js?v=5";
+    s.onload = () => { refreshAllCases(); resolve(); };
+    s.onerror = () => { console.warn("cs2data.js failed to load"); resolve(); };
+    document.body.appendChild(s);
+  });
+}
 
 /* Applique les vrais prix Steam + les images aux caisses Arena */
-if (typeof ARENA_STEAM !== "undefined") {
-  for (const c of CASES) {
+if (window.ARENA_STEAM) {
+  for (const c of window.CASES || []) {
     for (const it of c.items) {
-      const sp = ARENA_STEAM[it.weapon + " | " + it.name];
+      const sp = window.ARENA_STEAM[it.weapon + " | " + it.name];
       if (sp) {
         it.price = sp.base;
         it.prices = sp.prices;
         if (sp.stPrices) it.stPrices = sp.stPrices;
       }
     }
-    if (!c.image && c.imageOf && typeof SKIN_IMAGES !== "undefined" && SKIN_IMAGES[c.imageOf]) {
-      c.image = SKIN_IMAGES[c.imageOf];
+    if (!c.image && c.imageOf && window.SKIN_IMAGES && window.SKIN_IMAGES[c.imageOf]) {
+      c.image = window.SKIN_IMAGES[c.imageOf];
     }
   }
 }
 
 function svgIcon(type, color) {
-  return `<svg viewBox="0 0 120 48" fill="${color}" xmlns="http://www.w3.org/2000/svg">${WEAPON_ICONS[type] || WEAPON_ICONS.rifle}</svg>`;
+  return `<svg viewBox="0 0 120 48" fill="${color}" xmlns="http://www.w3.org/2000/svg">${window.WEAPON_ICONS[type] || window.WEAPON_ICONS.rifle}</svg>`;
 }
 
 /* Vraie image du skin si dispo, sinon silhouette SVG */
 function skinVisual(item, color) {
-  const img = item.image || (typeof SKIN_IMAGES !== "undefined" && SKIN_IMAGES[item.weapon + " | " + item.name]);
+  const img = item.image || (window.SKIN_IMAGES && window.SKIN_IMAGES[item.weapon + " | " + item.name]);
   if (img) return `<img class="skin-img" src="${img}" alt="" loading="lazy" draggable="false">`;
   return svgIcon(item.type, color);
 }
@@ -182,11 +201,11 @@ function rollItem(caseData) {
 
 function rollWear() {
   let r = Math.random() * 100;
-  for (const w of WEARS) {
+  for (const w of window.WEARS) {
     r -= w.chance;
     if (r <= 0) return w;
   }
-  return WEARS[WEARS.length - 1];
+  return window.WEARS[window.WEARS.length - 1];
 }
 
 /* Prix Steam de l'usure demandée, sinon l'usure la plus proche */
@@ -208,8 +227,8 @@ function dropPrice(item, wearKey, wearMult, stattrak) {
     const st = wearPrice(item.stPrices, wearKey);
     if (st != null) return st;
     const normal = wearPrice(item.prices, wearKey);
-    if (normal != null) return +(normal * STATTRAK_MULT).toFixed(2);
-    return +(item.price * wearMult * STATTRAK_MULT).toFixed(2);
+    if (normal != null) return +(normal * window.STATTRAK_MULT).toFixed(2);
+    return +(item.price * wearMult * window.STATTRAK_MULT).toFixed(2);
   }
   const p = wearPrice(item.prices, wearKey);
   if (p != null) return p;
@@ -250,7 +269,7 @@ function rollDrop(caseData) {
   // Les stickers n'ont ni usure ni StatTrak
   const isSticker = item.type === "sticker";
   const wear = isSticker ? null : rollWear();
-  const stattrak = !isSticker && item.type !== "gloves" && Math.random() * 100 < STATTRAK_CHANCE;
+  const stattrak = !isSticker && item.type !== "gloves" && Math.random() * 100 < window.STATTRAK_CHANCE;
   const price = isSticker ? item.price : dropPrice(item, wear.key, wear.mult, stattrak);
   return {
     id: Date.now() + "-" + Math.random().toString(36).slice(2, 8),
@@ -258,7 +277,7 @@ function rollDrop(caseData) {
     name: item.name,
     rarity: item.rarity,
     type: item.type,
-    image: item.image || (typeof SKIN_IMAGES !== "undefined" ? SKIN_IMAGES[item.weapon + " | " + item.name] : undefined),
+    image: item.image || (window.SKIN_IMAGES ? window.SKIN_IMAGES[item.weapon + " | " + item.name] : undefined),
     wear: wear ? wear.key : null,
     wearLabel: wear ? wear.label : null,
     stattrak,
@@ -272,7 +291,7 @@ function rollDrop(caseData) {
    RENDU DES CARTES SKIN
    ===================================================== */
 function skinCardHTML(drop, opts = {}) {
-  const r = RARITIES[drop.rarity];
+  const r = window.RARITIES[drop.rarity];
   const bigWin = opts.casePrice && drop.price >= opts.casePrice * 5;
   return `
     <div class="skin-card ${bigWin ? "big-win" : ""}" style="--rarity:${r.color};--rarity-soft:${r.color}22" data-id="${drop.id || ""}">
@@ -354,16 +373,16 @@ function caseCardHTML(c) {
       <div class="case-name">${c.name}</div>
       <div class="case-tagline">${c.tagline}</div>
       <div class="case-rarities">
-        ${rarities.slice(0, 6).map((r) => `<span class="rarity-pip" style="background:${RARITIES[r].color}"></span>`).join("")}
+        ${rarities.slice(0, 6).map((r) => `<span class="rarity-pip" style="background:${window.RARITIES[r].color}"></span>`).join("")}
       </div>
       <div class="case-price">${fmt(c.price)}</div>
     </div>`;
 }
 
 function renderCasesGrid() {
-  $("#cases-grid").innerHTML = CASES.map(caseCardHTML).join("");
+  $("#cases-grid").innerHTML = (window.CASES || []).map(caseCardHTML).join("");
 
-  const exclusives = typeof EXCLUSIVE_CASES !== "undefined" ? EXCLUSIVE_CASES : [];
+  const exclusives = window.EXCLUSIVE_CASES || [];
   const only = exclusives.filter((c) => c.category === "only");
   const knives = exclusives.filter((c) => c.category === "knives");
   const themed = exclusives.filter((c) => c.category === "themed");
@@ -377,7 +396,7 @@ function renderCasesGrid() {
   $("#stickers-grid").innerHTML = stickers.map(caseCardHTML).join("");
   $("#stickers-count").textContent = `(${stickers.length} official capsules)`;
 
-  const cs2 = typeof CS2_CASES !== "undefined" ? CS2_CASES : [];
+  const cs2 = window.CS2_CASES || [];
   $("#cs2-grid").innerHTML = cs2.map(caseCardHTML).join("");
   $("#cs2-count").textContent = `(${cs2.length} official in-game cases)`;
 
@@ -396,7 +415,7 @@ function renderHeroStats() {
 /* ---------- Faux drops en direct ---------- */
 function pushLiveDrop(drop) {
   const track = $("#live-drops-track");
-  const r = RARITIES[drop.rarity];
+  const r = window.RARITIES[drop.rarity];
   const el = document.createElement("div");
   el.className = "live-drop-item";
   el.style.borderLeftColor = r.color;
@@ -411,9 +430,6 @@ function fakeLiveDrop() {
   const c = ALL_CASES[Math.floor(Math.random() * ALL_CASES.length)];
   pushLiveDrop(rollDrop(c));
 }
-
-for (let i = 0; i < 8; i++) fakeLiveDrop();
-setInterval(fakeLiveDrop, 3500);
 
 /* =====================================================
    VUE : DÉTAIL D'UNE CAISSE
@@ -527,7 +543,7 @@ function buildReel(winnerDrop) {
 }
 
 function reelItemHTML(it, revealSpecial = false) {
-  const r = RARITIES[it.rarity];
+  const r = window.RARITIES[it.rarity];
   // Comme dans CS2 : les objets rares apparaissent en carte dorée mystère
   if (!revealSpecial && (it.rarity === "special" || it.fromRare)) {
     return `
@@ -853,14 +869,43 @@ document.addEventListener("visibilitychange", () => {
    INIT
    ===================================================== */
 async function boot() {
-  await initAuth();
-  state = await loadState();
-  renderBalance();
-  renderCasesGrid();
-  renderHeroStats();
-  updateBonusButton();
-  renderUserChip();
-  initAuthModal();
+  try {
+    state = defaultState();
+    renderBalance();
+    renderCasesGrid();
+    renderHeroStats();
+    updateBonusButton();
+    renderUserChip();
+    initAuthModal();
+  } catch (e) {
+    console.error("UI boot failed:", e);
+  }
+
+  try {
+    for (let i = 0; i < 8; i++) fakeLiveDrop();
+    setInterval(fakeLiveDrop, 3500);
+  } catch (e) {
+    console.warn("Live drops init failed:", e);
+  }
+
+  try {
+    await initAuth();
+    state = await loadState();
+    renderBalance();
+    renderCasesGrid();
+    renderHeroStats();
+    renderUserChip();
+  } catch (e) {
+    console.error("Auth/load failed:", e);
+  }
+
+  try {
+    await loadCs2Data();
+    renderCasesGrid();
+    refreshAllCases();
+  } catch (e) {
+    console.error("cs2data load failed:", e);
+  }
 }
 
 boot();

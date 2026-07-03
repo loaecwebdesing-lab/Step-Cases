@@ -578,7 +578,8 @@ const out =
   "const SKIN_IMAGES = " + JSON.stringify(SKIN_IMAGES) + ";\n\n" +
   "const ARENA_STEAM = " + JSON.stringify(ARENA_STEAM) + ";\n\n" +
   "const ALL_SKINS = " + JSON.stringify(ALL_SKINS) + ";\n\n" +
-  "const EXCLUSIVE_CASES = " + JSON.stringify(EXCLUSIVE_CASES) + ";\n";
+  "const EXCLUSIVE_CASES = " + JSON.stringify(EXCLUSIVE_CASES) + ";\n\n" +
+  "window.CS2_CASES=CS2_CASES;window.SKIN_IMAGES=SKIN_IMAGES;window.ARENA_STEAM=ARENA_STEAM;window.EXCLUSIVE_CASES=EXCLUSIVE_CASES;window.ALL_SKINS=ALL_SKINS;\n";
 
 fs.writeFileSync(path.join(__dirname, "..", "js", "cs2data.js"), out);
 console.log(`Pool global ALL_SKINS : ${ALL_SKINS.length} skins (${skippedNoPrice} sans prix Steam ignorés)`);

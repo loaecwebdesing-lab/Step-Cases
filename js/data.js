@@ -163,3 +163,11 @@ const WEAPON_ICONS = {
   gloves:
     '<path d="M40 6 L52 6 L54 20 L58 20 L60 8 L70 8 L70 22 L76 14 L86 16 L78 32 L76 42 L44 42 L38 28 L30 22 L36 16 L42 22 Z"/>',
 };
+
+/* Shared globals for classic scripts (let/const are not cross-file) */
+window.CASES = CASES;
+window.RARITIES = RARITIES;
+window.WEARS = WEARS;
+window.WEAPON_ICONS = WEAPON_ICONS;
+window.STATTRAK_CHANCE = STATTRAK_CHANCE;
+window.STATTRAK_MULT = STATTRAK_MULT;

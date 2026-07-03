@@ -24,8 +24,8 @@ function botProfile(name) {
   const h = botHash(name);
   return {
     name,
-    avatarEmoji: AVATAR_EMOJIS[h % AVATAR_EMOJIS.length],
-    avatarColor: AVATAR_COLORS[(h >> 4) % AVATAR_COLORS.length],
+    avatarEmoji: window.AVATAR_EMOJIS[h % window.AVATAR_EMOJIS.length],
+    avatarColor: window.AVATAR_COLORS[(h >> 4) % window.AVATAR_COLORS.length],
   };
 }
 
@@ -67,7 +67,7 @@ let botBattles = [];
 function genBotBattle(creatorName) {
   const formats = Object.keys(FORMAT_INFO);
   const modes = ["normal", "normal", "normal", "fou", "sharing"];
-  const affordable = ALL_CASES.filter((c) => c.price <= 25);
+  const affordable = window.ALL_CASES.filter((c) => c.price <= 25);
   const count = 1 + Math.floor(Math.random() * 4);
   return {
     id: "bb-" + Math.random().toString(36).slice(2, 8),
@@ -87,7 +87,7 @@ function ensureBotBattles() {
 }
 
 function battleCasesCost(caseIds) {
-  return +caseIds.reduce((s, id) => s + ALL_CASES.find((x) => x.id === id).price, 0).toFixed(2);
+  return +caseIds.reduce((s, id) => s + window.ALL_CASES.find((x) => x.id === id).price, 0).toFixed(2);
 }
 
 function renderBattlesHome() {
@@ -120,7 +120,7 @@ function renderBattlesHome() {
           </div>
           <div class="br-cases">
             ${b.cases.map((id) => {
-              const c = ALL_CASES.find((x) => x.id === id);
+              const c = window.ALL_CASES.find((x) => x.id === id);
               return `<div class="br-case" title="${c.name} (${fmt(c.price)})">${caseVisual(c)}</div>`;
             }).join("")}
             <span class="br-rounds">${b.cases.length} round${b.cases.length > 1 ? "s" : ""}</span>
@@ -142,10 +142,10 @@ function renderBattlesHome() {
 }
 
 function renderBattleSetup() {
-  if (!battleCfg.cases.length) battleCfg.cases = [ALL_CASES[0].id];
+  if (!battleCfg.cases.length) battleCfg.cases = [window.ALL_CASES[0].id];
 
   const picker = $("#battle-case-picker");
-  picker.innerHTML = [...ALL_CASES]
+  picker.innerHTML = [...window.ALL_CASES]
     .sort((a, b) => a.price - b.price)
     .map((c) => `
       <div class="battle-case" data-case="${c.id}">
@@ -182,7 +182,7 @@ function renderBattleSequence() {
   } else {
     seq.innerHTML = battleCfg.cases
       .map((id, i) => {
-        const c = ALL_CASES.find((x) => x.id === id);
+        const c = window.ALL_CASES.find((x) => x.id === id);
         return `
           <div class="seq-chip" data-i="${i}" title="Round ${i + 1} — cliquer pour retirer">
             <span class="seq-round">R${i + 1}</span>
@@ -343,7 +343,7 @@ async function runBattle(opts) {
   if (state.balance < cost) { toast("Insufficient balance for this battle!", true); return; }
   if (!battleCfg.cases.length) { toast("Add at least one case!", true); return; }
 
-  const battleCases = battleCfg.cases.map((id) => ALL_CASES.find((x) => x.id === id));
+  const battleCases = battleCfg.cases.map((id) => window.ALL_CASES.find((x) => x.id === id));
   const info = FORMAT_INFO[battleCfg.format];
   const user = currentUser() || { name: "You", avatarEmoji: "👤", avatarColor: "#ff6b35" };
 
@@ -497,7 +497,7 @@ async function runBattle(opts) {
       const d = roundDrops[i];
       p.drops.push(d);
       p.total = +(p.total + d.price).toFixed(2);
-      const r = RARITIES[d.rarity];
+      const r = window.RARITIES[d.rarity];
       $(`#bp-stage-${i}`).innerHTML = "";
       $(`#bp-drops-${i}`).insertAdjacentHTML("afterbegin", `
         <div class="bp-drop" style="--rarity:${r.color}">

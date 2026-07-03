@@ -25,13 +25,13 @@ function getUpgradePool() {
   if (upgradePool) return upgradePool;
   const seen = new Set();
   upgradePool = [];
-  if (typeof ALL_SKINS !== "undefined") {
-    for (const it of ALL_SKINS) {
+  if (window.ALL_SKINS) {
+    for (const it of window.ALL_SKINS) {
       seen.add(it.weapon + " | " + it.name);
       upgradePool.push(it);
     }
   }
-  for (const c of ALL_CASES) {
+  for (const c of window.ALL_CASES) {
     for (const it of c.items) {
       if (it.type === "sticker") continue; // pas de stickers en cible d'upgrade
       const key = it.weapon + " | " + it.name;
@@ -75,7 +75,7 @@ function ensureAutoTarget() {
 }
 
 function miniSkinHTML(it, cls = "") {
-  const r = RARITIES[it.rarity];
+  const r = window.RARITIES[it.rarity];
   return `
     <div class="mini-skin ${cls}" style="--rarity:${r.color}">
       ${skinVisual(it, r.color)}

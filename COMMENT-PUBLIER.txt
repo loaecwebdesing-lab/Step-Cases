@@ -1,0 +1,58 @@
+╔══════════════════════════════════════════════════════════════╗
+║           STEP CASES — PUBLIER EN 3 CLICS (SIMPLE)            ║
+╚══════════════════════════════════════════════════════════════╝
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ MÉTHODE 1 — LA PLUS SIMPLE (sans commandes, sans GitHub)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  ① Supabase (une seule fois)
+     → https://supabase.com → New project
+     → SQL Editor → colle le fichier supabase/schema.sql → Run
+     → Settings → API → copie "Project URL" et "anon public key"
+     → Authentication → Email → désactive "Confirm email"
+
+  ② Mets tes clés dans le fichier :
+     js/config.js
+     (remplace YOUR_PROJECT et YOUR_ANON_KEY)
+
+  ③ Double-clique sur :  PUBLIER-SIMPLE.bat
+     → une page Netlify s'ouvre
+     → glisse le dossier StepCases1 sur la page
+     → ton site est en ligne en 30 secondes !
+
+  URL du site : Netlify te donne un lien du type
+  https://quelque-chose.netlify.app
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ MÉTHODE 2 — Avec GitHub (si tu veux mettre à jour facilement)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  ① Installe "GitHub Desktop" :
+     https://desktop.github.com
+
+  ② Ouvre GitHub Desktop → Sign in (compte GitHub)
+
+  ③ Menu File → Add local repository
+     → choisis : C:\Users\Shadow\Desktop\StepCases1
+     → clique Add
+
+  ④ Bouton bleu en haut : "Publish repository"
+     → nom : StepCases → Publish
+
+  ⑤ Netlify : https://app.netlify.com
+     → Add new site → Import from Git → choisis StepCases
+     → Environment variables :
+        SUPABASE_URL = ton url supabase
+        SUPABASE_ANON_KEY = ta clé anon
+     → Deploy
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ PROBLÈME ?
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  • "Author identity unknown" → ignore si tu utilises GitHub Desktop
+  • Site sans connexion compte → vérifie js/config.js sur Netlify Drop
+  • Inscription ne marche pas → désactive "Confirm email" dans Supabase
