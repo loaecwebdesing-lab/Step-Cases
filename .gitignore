@@ -1,0 +1,9 @@
+# Dependencies
+node_modules/
+
+# Supabase / Netlify secrets (generated at build on Netlify)
+js/config.js
+
+# OS
+.DS_Store
+Thumbs.db

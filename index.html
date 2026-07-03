@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>STEP CASES — CS2 Case Opening</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+
+  <!-- ============ HEADER ============ -->
+  <header class="header">
+    <div class="header-inner">
+      <a class="logo" href="#" id="logo-btn">
+        <span class="logo-icon">⬡</span>
+        <span class="logo-text">STEP<em>CASES</em></span>
+      </a>
+
+      <nav class="nav">
+        <button class="nav-btn active" data-view="cases">Cases</button>
+        <button class="nav-btn" data-view="battles">⚔️ Battles</button>
+        <button class="nav-btn" data-view="upgrade">⬆ Upgrade</button>
+        <button class="nav-btn" data-view="leaderboard">🏆 Leaderboard</button>
+        <button class="nav-btn" data-view="inventory">Inventory <span class="nav-badge" id="inv-count">0</span></button>
+      </nav>
+
+      <div class="header-right">
+        <button class="btn-bonus" id="btn-bonus" title="Free bonus every 60 seconds">🎁 Bonus</button>
+        <div class="balance">
+          <span class="balance-label">BALANCE</span>
+          <span class="balance-value" id="balance">$10.00</span>
+        </div>
+        <div class="user-chip" id="user-chip"></div>
+      </div>
+    </div>
+  </header>
+
+  <!-- ============ VIEW: CASE LIST ============ -->
+  <main class="view" id="view-cases">
+    <section class="hero">
+      <div class="hero-glow"></div>
+      <h1>OPEN. WIN. <span class="grad">DOMINATE.</span></h1>
+      <p>The best CS2 case opening simulator — 100% free, real odds.</p>
+      <div class="hero-stats">
+        <div class="hero-stat"><b id="stat-total-opened">0</b><span>cases opened</span></div>
+        <div class="hero-stat"><b id="stat-best-drop">—</b><span>best drop</span></div>
+        <div class="hero-stat"><b id="stat-profit">$0.00</b><span>total profit</span></div>
+      </div>
+    </section>
+
+    <section class="live-drops">
+      <div class="live-drops-header">
+        <span class="live-dot"></span> LIVE DROPS
+      </div>
+      <div class="live-drops-track" id="live-drops-track"></div>
+    </section>
+
+    <h2 class="section-title">// STEP CASES <span class="odds-hint">(exclusive)</span></h2>
+    <div class="cases-grid" id="cases-grid"></div>
+
+    <h2 class="section-title">// ONLY <span class="odds-hint" id="only-count"></span></h2>
+    <div class="cases-grid" id="only-grid"></div>
+
+    <h2 class="section-title">// KNIVES <span class="odds-hint" id="knives-count"></span></h2>
+    <div class="cases-grid" id="knives-grid"></div>
+
+    <h2 class="section-title">// THEMED <span class="odds-hint">(by weapon type)</span></h2>
+    <div class="cases-grid" id="themed-grid"></div>
+
+    <h2 class="section-title">// STICKERS <span class="odds-hint" id="stickers-count"></span></h2>
+    <div class="cases-grid" id="stickers-grid"></div>
+
+    <h2 class="section-title">// CS2 CASES <span class="odds-hint" id="cs2-count"></span></h2>
+    <div class="cases-grid" id="cs2-grid"></div>
+  </main>
+
+  <!-- ============ VIEW: CASE DETAIL ============ -->
+  <main class="view hidden" id="view-case">
+    <button class="btn-back" id="btn-back">← Back to cases</button>
+
+    <div class="case-detail-header">
+      <div class="case-detail-img" id="case-detail-img"></div>
+      <div class="case-detail-info">
+        <h2 id="case-detail-name"></h2>
+        <p id="case-detail-tagline"></p>
+        <div class="case-detail-price" id="case-detail-price"></div>
+      </div>
+    </div>
+
+    <div class="roulette-zone hidden" id="roulette-zone">
+      <div class="roulette-marker"></div>
+      <div class="roulette-window">
+        <div class="roulette-track" id="roulette-track"></div>
+      </div>
+    </div>
+
+    <div class="open-controls">
+      <div class="multi-select" id="multi-select">
+        <button class="multi-btn active" data-count="1">x1</button>
+        <button class="multi-btn" data-count="2">x2</button>
+        <button class="multi-btn" data-count="3">x3</button>
+      </div>
+      <button class="btn-open" id="btn-open">OPEN CASE</button>
+      <label class="fast-toggle">
+        <input type="checkbox" id="fast-mode" /> Fast mode
+      </label>
+    </div>
+
+    <h2 class="section-title">// CASE CONTENTS <span class="odds-hint">(odds shown)</span></h2>
+    <div class="case-contents" id="case-contents"></div>
+  </main>
+
+  <!-- ============ VIEW: INVENTORY ============ -->
+  <main class="view hidden" id="view-inventory">
+    <div class="inv-header">
+      <h2 class="section-title">// MY INVENTORY</h2>
+      <div class="inv-actions">
+        <span class="inv-total" id="inv-total">Value: $0.00</span>
+        <button class="btn-sell-all" id="btn-sell-all">SELL ALL</button>
+      </div>
+    </div>
+    <div class="inventory-grid" id="inventory-grid"></div>
+    <p class="empty-msg hidden" id="inv-empty">Your inventory is empty… Open cases to fill it up!</p>
+  </main>
+
+  <!-- ============ VIEW: PROFILE ============ -->
+  <main class="view hidden" id="view-profile">
+    <div class="profile-header" id="profile-header"></div>
+    <h2 class="section-title">// MY STATS</h2>
+    <div class="stats-grid" id="stats-grid"></div>
+    <button class="btn-reset" id="btn-reset">⟲ Reset progress ($10.00)</button>
+  </main>
+
+  <!-- ============ VIEW: BATTLES ============ -->
+  <main class="view hidden" id="view-battles">
+
+    <div id="battles-home">
+      <div class="battles-top">
+        <button class="btn-new-battle" id="btn-new-battle">+ CREATE BATTLE</button>
+        <h2 class="section-title">// AVAILABLE BATTLES <span class="odds-hint">(join another player's game)</span></h2>
+      </div>
+      <div class="battle-list" id="battle-list"></div>
+    </div>
+
+    <div class="battle-setup hidden" id="battle-setup">
+      <div class="setup-header">
+        <button class="btn-back" id="btn-setup-back">← Back to battles</button>
+        <h3>NEW BATTLE</h3>
+      </div>
+      <div class="battle-setup-grid">
+        <div class="setup-block">
+          <h4>FORMAT</h4>
+          <div class="pill-select" id="battle-format">
+            <button class="pill active" data-format="1v1">1v1</button>
+            <button class="pill" data-format="1v1v1">1v1v1</button>
+            <button class="pill" data-format="1v1v1v1">1v1v1v1</button>
+            <button class="pill" data-format="2v2">2v2</button>
+          </div>
+        </div>
+        <div class="setup-block">
+          <h4>MODE</h4>
+          <div class="pill-select" id="battle-mode">
+            <button class="pill active" data-mode="normal" title="Highest total wins everything">Classic</button>
+            <button class="pill" data-mode="fou" title="Lowest total wins everything!">🤪 Crazy Mode</button>
+            <button class="pill" data-mode="sharing" title="Winnings are shared between all players">🤝 Sharing</button>
+          </div>
+        </div>
+      </div>
+
+      <h4 class="setup-case-title">BATTLE CASES <span class="odds-hint">(click to add, 10 max — 1 round per case)</span></h4>
+      <div class="battle-sequence" id="battle-sequence"></div>
+      <div class="battle-case-picker" id="battle-case-picker"></div>
+
+      <div class="battle-actions">
+        <button class="btn-open" id="btn-create-battle">CREATE BATTLE</button>
+      </div>
+    </div>
+
+    <div class="battle-arena hidden" id="battle-arena">
+      <div class="battle-info" id="battle-info"></div>
+      <div class="battle-players" id="battle-players"></div>
+      <div class="battle-footer" id="battle-footer"></div>
+    </div>
+  </main>
+
+  <!-- ============ VIEW: UPGRADE ============ -->
+  <main class="view hidden" id="view-upgrade">
+    <h2 class="section-title">// SKIN UPGRADER <span class="odds-hint">(risk your skins for a better one)</span></h2>
+
+    <div class="upgrade-layout">
+      <div class="upgrade-col">
+        <h4>YOUR SKINS <span class="odds-hint">(stack up to 5)</span></h4>
+        <div class="upgrade-slot" id="upgrade-mine">
+          <span class="slot-empty">Pick up to 5 skins from your inventory ↓</span>
+        </div>
+        <div class="upgrade-picker" id="upgrade-inv"></div>
+      </div>
+
+      <div class="upgrade-center">
+        <div class="upgrade-wheel" id="upgrade-wheel">
+          <div class="wheel-ring" id="wheel-ring"></div>
+          <div class="wheel-pointer"></div>
+          <div class="wheel-chance" id="wheel-chance">—</div>
+        </div>
+        <button class="btn-open" id="btn-upgrade" disabled>UPGRADE</button>
+        <p class="upgrade-hint" id="upgrade-hint"></p>
+      </div>
+
+      <div class="upgrade-col">
+        <h4>TARGET SKIN <span class="odds-hint" id="pool-count"></span></h4>
+        <div class="upgrade-slot" id="upgrade-target">
+          <span class="slot-empty">Pick a skin to target ↓</span>
+        </div>
+        <input type="text" class="upgrade-search" id="upgrade-search" placeholder="Search a skin… (e.g. AWP Dragon Lore)" />
+        <div class="upgrade-filters">
+          <div class="uf-prices">
+            <input type="number" class="upgrade-search uf-price" id="uf-min" placeholder="Min price $" min="0" />
+            <input type="number" class="upgrade-search uf-price" id="uf-max" placeholder="Max price $" min="0" />
+          </div>
+          <div class="pill-select uf-rarities" id="uf-rarities">
+            <button class="pill small active" data-r="all">All</button>
+            <button class="pill small" data-r="milspec" style="--pc:#4b69ff">Mil-Spec</button>
+            <button class="pill small" data-r="restricted" style="--pc:#8847ff">Restricted</button>
+            <button class="pill small" data-r="classified" style="--pc:#d32ce6">Classified</button>
+            <button class="pill small" data-r="covert" style="--pc:#eb4b4b">Covert</button>
+            <button class="pill small" data-r="special" style="--pc:#ffd700">★ Gold</button>
+          </div>
+        </div>
+        <div class="upgrade-picker" id="upgrade-pool"></div>
+      </div>
+    </div>
+  </main>
+
+  <!-- ============ VIEW: LEADERBOARD ============ -->
+  <main class="view hidden" id="view-leaderboard">
+    <h2 class="section-title">// LEADERBOARDS</h2>
+    <div class="pill-select lb-tabs" id="lb-tabs">
+      <button class="pill active" data-lb="bestdrop">💎 Best drop</button>
+      <button class="pill" data-lb="bestskin">🔪 Best skin</button>
+      <button class="pill" data-lb="money">💰 Richest</button>
+      <button class="pill" data-lb="opened">📦 Cases opened</button>
+      <button class="pill" data-lb="level">⭐ Level</button>
+    </div>
+    <div class="lb-list" id="lb-list"></div>
+  </main>
+
+  <!-- ============ MODAL: PLAYER PROFILE (leaderboard) ============ -->
+  <div class="modal-overlay hidden" id="player-modal">
+    <div class="modal player-profile-modal">
+      <button type="button" class="modal-close" id="player-modal-close" aria-label="Close">✕</button>
+      <div id="player-modal-content"></div>
+    </div>
+  </div>
+
+  <!-- ============ MODAL: BATTLE LOOT ============ -->
+  <div class="modal-overlay hidden" id="battle-modal">
+    <div class="modal battle-loot-modal">
+      <h3 id="battle-loot-title">BATTLE LOOT</h3>
+      <p class="loot-subtitle" id="battle-loot-subtitle"></p>
+      <div class="loot-grid" id="battle-loot-grid"></div>
+      <div class="modal-actions">
+        <button class="btn-secondary" id="btn-loot-sell-all"></button>
+        <button class="btn-primary" id="btn-loot-keep">KEEP ALL</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ MODAL: AUTH ============ -->
+  <div class="modal-overlay hidden" id="auth-modal">
+    <div class="modal auth-modal">
+      <h3 id="auth-title">LOG IN</h3>
+      <div class="auth-tabs">
+        <button class="pill active" id="tab-login">Log in</button>
+        <button class="pill" id="tab-register">Sign up</button>
+      </div>
+      <form id="auth-form" autocomplete="off">
+        <input type="text" id="auth-username" placeholder="Username" maxlength="16" required />
+        <input type="password" id="auth-password" placeholder="Password" required />
+        <div class="avatar-picker hidden" id="avatar-picker"></div>
+        <p class="auth-error" id="auth-error"></p>
+        <button type="submit" class="btn-primary" id="auth-submit">LOG IN</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- ============ MODAL: RESULT ============ -->
+  <div class="modal-overlay hidden" id="result-modal">
+    <div class="modal result-modal">
+      <h3 id="result-title">CONGRATULATIONS!</h3>
+      <div class="result-items" id="result-items"></div>
+      <div class="modal-actions">
+        <button class="btn-secondary" id="btn-sell-result"></button>
+        <button class="btn-primary" id="btn-keep-result">KEEP</button>
+        <button class="btn-again" id="btn-open-again">↻ OPEN AGAIN</button>
+      </div>
+    </div>
+  </div>
+
+  <footer class="footer">
+    STEP CASES — Free simulator, no real money involved. Skins & names © Valve Corporation.
+  </footer>
+
+  <script src="js/config.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="js/data.js"></script>
+  <script src="js/cs2data.js"></script>
+  <script src="js/db.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/app.js"></script>
+  <script src="js/battle.js"></script>
+  <script src="js/upgrade.js"></script>
+  <script src="js/leaderboard.js"></script>
+</body>
+</html>
