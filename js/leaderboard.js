@@ -118,8 +118,8 @@ async function fetchEntries() {
 }
 
 const LB_CONFIG = {
-  bestdrop: { get: (e) => e.bestDrop.value, text: (e) => e.bestDrop.label, val: (e) => fmt(e.bestDrop.value) },
-  bestskin: { get: (e) => e.bestSkin.value, text: (e) => e.bestSkin.label, val: (e) => fmt(e.bestSkin.value) },
+  bestdrop: { get: (e) => e.bestDrop.value, text: (e) => skinInlineHTML(e.bestDrop.item, e.bestDrop.label), val: (e) => fmt(e.bestDrop.value), skin: true },
+  bestskin: { get: (e) => e.bestSkin.value, text: (e) => skinInlineHTML(e.bestSkin.item, e.bestSkin.label), val: (e) => fmt(e.bestSkin.value), skin: true },
   money: { get: (e) => e.money, text: () => "Current balance", val: (e) => fmt(e.money) },
   opened: { get: (e) => e.opened, text: () => "Cases opened", val: (e) => e.opened.toLocaleString("en-US") },
   level: { get: (e) => e.xp, text: (e) => `${Math.round(e.xp).toLocaleString("en-US")} XP`, val: (e) => "Lv. " + levelFromXp(e.xp) },
@@ -161,11 +161,11 @@ function openPlayerProfile(entry) {
   ];
 
   const bestDropHTML = entry.bestDrop.item
-    ? skinCardHTML(entry.bestDrop.item)
+    ? skinHighlightHTML(entry.bestDrop.item)
     : '<p class="empty-msg small">No drops yet</p>';
 
   const bestSkinHTML = entry.bestSkin.item
-    ? skinCardHTML(entry.bestSkin.item)
+    ? skinHighlightHTML(entry.bestSkin.item)
     : '<p class="empty-msg small">Empty inventory</p>';
 
   const invHTML = inv.length
@@ -262,7 +262,7 @@ async function renderLeaderboard() {
         ${avatarHTML(e.profile, i < 3 ? 48 : 38)}
         <div class="lb-id">
           <span class="lb-name">${e.profile.name}${e.isMe ? " (you)" : ""}</span>
-          <span class="lb-sub">${cfg.text(e)}</span>
+          <span class="lb-sub${cfg.skin ? " lb-sub-skin" : ""}">${cfg.text(e)}</span>
         </div>
         <span class="lb-value">${cfg.val(e)}</span>
       </div>`)

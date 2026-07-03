@@ -272,6 +272,9 @@ function renderProfileHeader() {
   const profile = user || { name: "Guest", avatarEmoji: "👤", avatarColor: "#8a91ad" };
   const since = user ? new Date(user.created).toLocaleDateString("en-US") : "—";
   const best = typeof state !== "undefined" && state.stats.bestDrop;
+  const bestSkin = typeof state !== "undefined"
+    ? (state.inventory || []).reduce((a, b) => (!a || b.price > a.price ? b : a), null)
+    : null;
 
   el.innerHTML = `
     <div class="profile-card">
@@ -285,11 +288,15 @@ function renderProfileHeader() {
         </div>
         <p class="profile-since">Member since: ${since}</p>
       </div>
-      <div class="profile-best">
-        <span class="best-label">💎 BEST DROP</span>
-        ${best
-          ? `<span class="best-name">${best.weapon} | ${best.name}</span><span class="best-price">${"$" + best.price.toFixed(2)}</span>`
-          : '<span class="best-name">No drops yet</span>'}
+      <div class="profile-highlights">
+        <div class="profile-highlight-box">
+          <span class="best-label">💎 BEST DROP</span>
+          ${best ? skinHighlightHTML(best) : '<span class="best-name">No drops yet</span>'}
+        </div>
+        <div class="profile-highlight-box">
+          <span class="best-label">🔪 BEST SKIN</span>
+          ${bestSkin ? skinHighlightHTML(bestSkin) : '<span class="best-name">Empty inventory</span>'}
+        </div>
       </div>
     </div>`;
   const b = document.getElementById("btn-show-auth2");

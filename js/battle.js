@@ -665,7 +665,7 @@ function finishBattle(players, info, battleCases) {
 
   const myBest = players[0].drops.reduce((a, b) => (b.price > a.price ? b : a));
   if (!state.stats.bestDrop || myBest.price > state.stats.bestDrop.price) {
-    state.stats.bestDrop = { weapon: myBest.weapon, name: myBest.name, price: myBest.price };
+    state.stats.bestDrop = skinSnapshot(myBest);
   }
   saveState();
   renderBalance();

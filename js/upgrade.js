@@ -261,7 +261,7 @@ async function doUpgrade() {
     state.stats.upgradesWon = (state.stats.upgradesWon || 0) + 1;
     state.stats.won += price;
     if (!state.stats.bestDrop || price > state.stats.bestDrop.price) {
-      state.stats.bestDrop = { weapon: newItem.weapon, name: newItem.name, price };
+      state.stats.bestDrop = skinSnapshot(newItem);
     }
     addXp(20 + price * 0.5);
     winSound(upTarget.rarity === "special" ? "special" : "covert");

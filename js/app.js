@@ -120,6 +120,50 @@ function skinVisual(item, color) {
   return svgIcon(item.type, color);
 }
 
+function skinSnapshot(drop) {
+  if (!drop) return null;
+  return {
+    weapon: drop.weapon,
+    name: drop.name,
+    price: drop.price,
+    image: drop.image,
+    rarity: drop.rarity,
+    type: drop.type,
+    stattrak: !!drop.stattrak,
+    wearLabel: drop.wearLabel,
+  };
+}
+
+function skinThumbHTML(item, size = 40) {
+  if (!item?.weapon) return "";
+  const r = (window.RARITIES && window.RARITIES[item.rarity]) || { color: "#8a91ad" };
+  const img = item.image || (window.SKIN_IMAGES && window.SKIN_IMAGES[item.weapon + " | " + item.name]);
+  const inner = img
+    ? `<img src="${img}" alt="" loading="lazy" draggable="false">`
+    : `<span class="skin-thumb-fallback">${skinVisual(item, r.color)}</span>`;
+  return `<span class="skin-thumb" style="--thumb:${size}px;--rarity:${r.color}">${inner}</span>`;
+}
+
+function skinInlineHTML(item, label) {
+  if (!item?.weapon) return `<span class="skin-inline-text">${label || "—"}</span>`;
+  const text = label || `${item.weapon} | ${item.name}`;
+  return `<span class="skin-inline">${skinThumbHTML(item, 34)}<span class="skin-inline-text">${text}</span></span>`;
+}
+
+function skinHighlightHTML(item) {
+  if (!item?.weapon) return '<p class="empty-msg small">—</p>';
+  const r = (window.RARITIES && window.RARITIES[item.rarity]) || { color: "#8a91ad" };
+  return `
+    <div class="skin-highlight">
+      ${skinThumbHTML(item, 68)}
+      <div class="skin-highlight-info">
+        <span class="skin-highlight-name">${item.stattrak ? '<span class="stattrak-tag">StatTrak™ </span>' : ""}${item.weapon} | ${item.name}</span>
+        ${item.wearLabel ? `<span class="skin-highlight-wear">${item.wearLabel}</span>` : ""}
+        <span class="skin-highlight-price" style="color:${r.color}">${fmt(item.price)}</span>
+      </div>
+    </div>`;
+}
+
 function caseVisual(c, soft = "33") {
   if (c.image) return `<img class="case-real-img" src="${c.image}" alt="" loading="lazy" draggable="false">`;
   return `<div class="case-box" style="--case-accent:${c.accent};--case-accent-soft:${c.accent}${soft}"></div>`;
@@ -576,7 +620,7 @@ function spendAndRoll() {
     const d = rollDrop(currentCase);
     drops.push(d);
     if (!state.stats.bestDrop || d.price > state.stats.bestDrop.price) {
-      state.stats.bestDrop = { weapon: d.weapon, name: d.name, price: d.price };
+      state.stats.bestDrop = skinSnapshot(d);
     }
     if (d.type === "knife") state.stats.knives++;
     if (d.type === "gloves") state.stats.gloves++;
@@ -825,6 +869,7 @@ $("#btn-sell-all").addEventListener("click", () => {
 function renderStats() {
   const s = state.stats;
   const profit = s.won - s.spent;
+  const bestSkin = state.inventory.reduce((a, b) => (!a || b.price > a.price ? b : a), null);
   const cards = [
     { v: s.opened, l: "Cases opened" },
     { v: fmt(s.spent), l: "Total spent" },
@@ -832,7 +877,8 @@ function renderStats() {
     { v: (profit >= 0 ? "+" : "") + fmt(profit).replace("$-", "-$"), l: "Net profit", c: profit >= 0 ? "var(--green)" : "var(--red)" },
     { v: s.knives, l: "🔪 Knives dropped" },
     { v: s.gloves, l: "🧤 Gloves dropped" },
-    { v: s.bestDrop ? `${s.bestDrop.weapon} | ${s.bestDrop.name}` : "—", l: s.bestDrop ? `Best drop (${fmt(s.bestDrop.price)})` : "Best drop" },
+    { v: s.bestDrop ? skinInlineHTML(s.bestDrop) : "—", l: s.bestDrop ? `Best drop (${fmt(s.bestDrop.price)})` : "Best drop", html: true },
+    { v: bestSkin ? skinInlineHTML(bestSkin) : "—", l: bestSkin ? `Best skin (${fmt(bestSkin.price)})` : "Best skin", html: true },
     { v: state.inventory.length, l: "Skins in inventory" },
     { v: `${s.battlesWon || 0}/${s.battles || 0}`, l: "⚔️ Battles won" },
     { v: `${s.upgradesWon || 0}/${s.upgrades || 0}`, l: "⬆ Upgrades won" },
@@ -841,7 +887,7 @@ function renderStats() {
     .map(
       (c) => `
       <div class="stat-card">
-        <div class="stat-value" ${c.c ? `style="color:${c.c}"` : ""}>${c.v}</div>
+        <div class="stat-value${c.html ? " stat-value-skin" : ""}" ${c.c ? `style="color:${c.c}"` : ""}>${c.v}</div>
         <div class="stat-label">${c.l}</div>
       </div>`
     )
