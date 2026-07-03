@@ -519,56 +519,125 @@ async function runBattle(opts) {
     await sleep(900);
   }
 
-  finishBattle(players, info);
+  finishBattle(players, info, battleCases);
 }
 
-/* Sélectionne des skins dont la valeur totale est la plus proche de la part équitable */
-function pickSubsetNearValue(items, target) {
+const SHARE_TOLERANCE = 0.5;
+
+function makeShareSubDrop(casePool) {
+  const c = casePool[Math.floor(Math.random() * casePool.length)];
+  const sub = rollDrop(c);
+  sub.id = "share-sub-" + Date.now() + "-" + Math.random().toString(36).slice(2, 7);
+  return sub;
+}
+
+function pickSubsetInRange(items, target, minSum, maxSum) {
   if (!items.length) return [];
-  if (items.length === 1) return [...items];
 
   const unit = 100;
   const targetU = Math.round(target * unit);
+  const minU = Math.round(minSum * unit);
+  const maxU = Math.round(maxSum * unit);
   const vals = items.map((it) => Math.round(it.price * unit));
-  const maxSum = vals.reduce((a, b) => a + b, 0);
+  const maxTotal = vals.reduce((a, b) => a + b, 0);
 
-  const dp = new Array(maxSum + 1).fill(null);
+  const dp = new Array(maxTotal + 1).fill(null);
   dp[0] = [];
 
   for (let i = 0; i < items.length; i++) {
     const v = vals[i];
-    for (let s = maxSum; s >= v; s--) {
+    for (let s = maxTotal; s >= v; s--) {
       if (dp[s - v] !== null && dp[s] === null) {
         dp[s] = dp[s - v].concat(i);
       }
     }
   }
 
-  let best = 0;
+  let best = -1;
   let bestDiff = Infinity;
-  for (let s = 0; s <= maxSum; s++) {
+  let bestInRange = -1;
+  let bestInRangeDiff = Infinity;
+
+  for (let s = 0; s <= maxTotal; s++) {
     if (dp[s] === null) continue;
     const diff = Math.abs(s - targetU);
+    if (s >= minU && s <= maxU && diff < bestInRangeDiff) {
+      bestInRangeDiff = diff;
+      bestInRange = s;
+    }
     if (diff < bestDiff) {
       bestDiff = diff;
       best = s;
     }
   }
 
-  const picked = (dp[best] || []).map((i) => items[i]);
-  if (picked.length) return picked;
-
-  return [items.reduce((a, b) => (Math.abs(a.price - target) <= Math.abs(b.price - target) ? a : b))];
+  const chosen = bestInRange >= 0 ? bestInRange : best;
+  if (chosen < 0 || !dp[chosen]) return [];
+  return dp[chosen].map((i) => items[i]);
 }
 
-function fairShareLoot(allDrops, shareCount) {
-  if (!allDrops.length || shareCount < 1) return [];
+function sumLoot(items) {
+  return +items.reduce((s, d) => s + d.price, 0).toFixed(2);
+}
+
+function fairShareLoot(allDrops, shareCount, casePool) {
+  if (shareCount < 1) return [];
+
   const total = allDrops.reduce((s, d) => s + d.price, 0);
-  const target = total / shareCount;
-  return pickSubsetNearValue(allDrops, target);
+  const target = +(total / shareCount).toFixed(2);
+  const minSum = +(target - SHARE_TOLERANCE).toFixed(2);
+  const maxSum = +(target + SHARE_TOLERANCE).toFixed(2);
+
+  const usable = allDrops.filter((d) => d.price <= maxSum);
+  let picked = pickSubsetInRange(usable, target, minSum, maxSum);
+  let sum = sumLoot(picked);
+
+  let attempts = 0;
+  while (sum < minSum && casePool?.length && attempts < 40) {
+    attempts++;
+    const sub = makeShareSubDrop(casePool);
+    if (sum + sub.price > maxSum) continue;
+    picked.push(sub);
+    sum = sumLoot(picked);
+  }
+
+  while (sum > maxSum && picked.length > 1) {
+    let bestRemove = -1;
+    let bestAfter = -1;
+    for (let i = 0; i < picked.length; i++) {
+      const after = sumLoot(picked.filter((_, j) => j !== i));
+      if (after <= maxSum && after >= minSum) {
+        bestRemove = i;
+        bestAfter = after;
+        break;
+      }
+      if (after <= maxSum && after > bestAfter) {
+        bestRemove = i;
+        bestAfter = after;
+      }
+    }
+    if (bestRemove < 0) break;
+    picked.splice(bestRemove, 1);
+    sum = bestAfter;
+  }
+
+  if (sum < minSum && casePool?.length) {
+    picked = [];
+    sum = 0;
+    attempts = 0;
+    while (sum < minSum && attempts < 50) {
+      attempts++;
+      const sub = makeShareSubDrop(casePool);
+      if (sum + sub.price > maxSum) continue;
+      picked.push(sub);
+      sum = sumLoot(picked);
+    }
+  }
+
+  return picked;
 }
 
-function finishBattle(players, info) {
+function finishBattle(players, info, battleCases) {
   const allDrops = players.flatMap((p) => p.drops);
   const totalValue = +allDrops.reduce((s, d) => s + d.price, 0).toFixed(2);
   let resultHTML = "";
@@ -576,11 +645,11 @@ function finishBattle(players, info) {
   let userWon = false;
 
   if (battleCfg.mode === "sharing") {
-    userItems = fairShareLoot(allDrops, players.length);
+    userItems = fairShareLoot(allDrops, players.length, battleCases);
     userWon = true;
-    const shareVal = +userItems.reduce((s, d) => s + d.price, 0).toFixed(2);
+    const shareVal = sumLoot(userItems);
     const fairShare = +(totalValue / players.length).toFixed(2);
-    resultHTML = `🤝 SHARING — your fair share: <b>${fmt(shareVal)}</b> (${fmt(fairShare)} per player from ${fmt(totalValue)} total)`;
+    resultHTML = `🤝 SHARING — your share: <b>${fmt(shareVal)}</b> (target ${fmt(fairShare)} ± $${SHARE_TOLERANCE.toFixed(2)} from ${fmt(totalValue)} total)`;
     players.forEach((_, i) => $(`#bp-${i}`).classList.add("winner"));
   } else if (info.teams) {
     const totals = info.teams.map((team) => team.reduce((s, i) => s + players[i].total, 0));
@@ -590,11 +659,11 @@ function finishBattle(players, info) {
     const winners = info.teams[bestTeam];
     winners.forEach((i) => $(`#bp-${i}`).classList.add("winner"));
     if (winners.some((i) => players[i].isUser)) {
-      userItems = fairShareLoot(allDrops, winners.length);
+      userItems = fairShareLoot(allDrops, winners.length, battleCases);
       userWon = true;
-      const shareVal = +userItems.reduce((s, d) => s + d.price, 0).toFixed(2);
+      const shareVal = sumLoot(userItems);
       const fairShare = +(totalValue / winners.length).toFixed(2);
-      resultHTML = `🏆 YOUR TEAM WINS ${battleCfg.mode === "fou" ? "(Crazy Mode!)" : ""} — shared loot: <b>${fmt(shareVal)}</b> (${fmt(fairShare)} each)`;
+      resultHTML = `🏆 YOUR TEAM WINS ${battleCfg.mode === "fou" ? "(Crazy Mode!)" : ""} — shared loot: <b>${fmt(shareVal)}</b> (target ${fmt(fairShare)} ± $${SHARE_TOLERANCE.toFixed(2)})`;
     } else {
       resultHTML = `💀 Team ${bestTeam === 0 ? "A" : "B"} wins… You leave empty-handed.`;
     }
