@@ -299,10 +299,17 @@ function battleReelHTML(idx, caseData, winnerDrop, rare = false) {
     </div>`;
 }
 
+function battleReelItemWidth(track) {
+  const first = track?.querySelector(".roulette-item");
+  if (!first) return 138;
+  const gap = parseFloat(getComputedStyle(track).gap) || 6;
+  return first.offsetWidth + gap;
+}
+
 function spinBattleReel(idx, duration) {
   const track = $(`#bp-track-${idx}`);
   const windowEl = track.parentElement;
-  const itemW = 96 + 5;
+  const itemW = battleReelItemWidth(track);
   const jitter = (Math.random() - 0.5) * itemW * 0.5;
   const target = BATTLE_WIN_INDEX * itemW + itemW / 2 - windowEl.clientWidth / 2 + jitter;
   track.style.transition = "none";

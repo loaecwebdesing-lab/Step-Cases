@@ -1459,26 +1459,30 @@ body {
   background: var(--bg);
   width: 100%;
   max-width: 100%;
-  mask-image: linear-gradient(90deg, transparent, #000 14%, #000 86%, transparent);
-  -webkit-mask-image: linear-gradient(90deg, transparent, #000 14%, #000 86%, transparent);
+  min-height: 132px;
+  --battle-item-w: 132px;
+  --battle-item-gap: 6px;
+  mask-image: linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent);
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent);
 }
 
 .roulette-track.mini { width: max-content; }
 
-.roulette-track.mini { gap: 5px; padding: 8px 0; }
+.roulette-track.mini { gap: var(--battle-item-gap, 6px); padding: 10px 0; }
 
 .roulette-track.mini .roulette-item {
-  width: 96px;
-  height: 88px;
-  border-radius: 8px;
-  gap: 2px;
-  padding: 5px;
+  width: var(--battle-item-w, 132px);
+  height: 118px;
+  border-radius: 9px;
+  gap: 3px;
+  padding: 7px 6px;
+  flex-shrink: 0;
 }
 
-.roulette-track.mini .roulette-item .skin-img { width: 62px; height: 40px; }
-.roulette-track.mini .roulette-item svg { width: 56px; height: 24px; }
-.roulette-track.mini .ri-weapon { font-size: 9px; }
-.roulette-track.mini .ri-name { font-size: 10px; }
+.roulette-track.mini .roulette-item .skin-img { width: 88px; height: 56px; object-fit: contain; }
+.roulette-track.mini .roulette-item svg { width: 76px; height: 34px; }
+.roulette-track.mini .ri-weapon { font-size: 10px; }
+.roulette-track.mini .ri-name { font-size: 11px; line-height: 1.15; }
 
 .battle-arena { margin-top: 8px; }
 
@@ -1510,7 +1514,7 @@ body {
   border: 1px solid var(--border);
   border-radius: var(--radius);
   padding: 14px;
-  min-height: 220px;
+  min-height: 280px;
   transition: all 0.3s;
   opacity: 0.85;
   min-width: 0;
@@ -1646,9 +1650,9 @@ body {
   animation: slideIn 0.35s ease;
 }
 
-.bp-drop .skin-img, .bp-drop svg { width: 52px; height: 32px; flex-shrink: 0; }
-.bpd-name { flex: 1; font-size: 11.5px; font-weight: 600; line-height: 1.25; }
-.bpd-price { font-family: var(--font-display); font-weight: 700; font-size: 14px; color: var(--accent-2); }
+.bp-drop .skin-img, .bp-drop svg { width: 72px; height: 46px; flex-shrink: 0; object-fit: contain; }
+.bpd-name { flex: 1; font-size: 12.5px; font-weight: 600; line-height: 1.25; }
+.bpd-price { font-family: var(--font-display); font-weight: 700; font-size: 15px; color: var(--accent-2); }
 
 .battle-footer { text-align: center; margin-top: 18px; }
 
@@ -2043,6 +2047,13 @@ body {
   .nav { order: 3; width: 100%; justify-content: center; flex-wrap: wrap; }
   .nav-btn { font-size: 13px; padding: 8px 10px; }
   .battle-players.cols-2, .battle-players.cols-3, .battle-players.cols-4 { grid-template-columns: 1fr; }
+  .bp-reel-window {
+    min-height: 118px;
+    --battle-item-w: 118px;
+    --battle-item-gap: 5px;
+  }
+  .roulette-track.mini .roulette-item { height: 106px; }
+  .roulette-track.mini .roulette-item .skin-img { width: 78px; height: 50px; }
   .hero-stats { gap: 24px; }
   .case-detail-header { flex-direction: column; text-align: center; }
   .roulette-item { width: 110px; height: 120px; }
