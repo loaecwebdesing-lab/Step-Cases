@@ -71,6 +71,7 @@ alter table public.profiles enable row level security;
 drop policy if exists "Profiles are viewable by everyone" on public.profiles;
 create policy "Profiles are viewable by everyone"
   on public.profiles for select
+  to anon, authenticated
   using (true);
 
 drop policy if exists "Users can insert own profile" on public.profiles;
@@ -83,3 +84,8 @@ create policy "Users can update own profile"
   on public.profiles for update
   using (auth.uid() = id)
   with check (auth.uid() = id);
+
+-- Table-level grants (required for anon/authenticated to read the public leaderboard)
+grant usage on schema public to anon, authenticated;
+grant select on table public.profiles to anon, authenticated;
+grant insert, update on table public.profiles to authenticated;

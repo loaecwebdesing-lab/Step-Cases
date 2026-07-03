@@ -140,8 +140,12 @@ async function dbFetchLeaderboard() {
   const { data, error } = await client
     .from("profiles")
     .select("id, username, avatar_emoji, avatar_color, balance, inventory, stats, xp, created_at")
-    .order("created_at", { ascending: true });
-  if (error) throw error;
+    .order("balance", { ascending: false })
+    .limit(100);
+  if (error) {
+    console.error("Leaderboard query failed:", error.message);
+    throw error;
+  }
   return data || [];
 }
 

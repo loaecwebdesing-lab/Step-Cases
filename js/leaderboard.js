@@ -57,18 +57,104 @@ function guestEntry() {
   };
 }
 
+const BOT_DROP_NAMES = [
+  ["AK-47", "Redline", 42],
+  ["AWP", "Asiimov", 88],
+  ["M4A4", "Neo-Noir", 35],
+  ["Desert Eagle", "Printstream", 62],
+  ["USP-S", "Kill Confirmed", 54],
+  ["Glock-18", "Fade", 420],
+  ["Karambit", "Doppler", 890],
+  ["Butterfly Knife", "Fade", 1200],
+];
+
+function botLeaderboardEntry(name) {
+  const hash = window.STEPCASES_botHash || (() => 0);
+  const profileFn = window.STEPCASES_botProfile || ((n) => ({ name: n, avatarEmoji: "🤖", avatarColor: "#8a91ad" }));
+  const h = hash(name);
+  const profile = profileFn(name);
+  const opened = 80 + (h % 2200);
+  const money = 12 + (h % 4500) / 10;
+  const xp = Math.floor(opened * (3.2 + (h % 5) / 10) + (h % 800));
+  const drop = BOT_DROP_NAMES[h % BOT_DROP_NAMES.length];
+  const bestDropPrice = drop[2] * (1 + (h % 30) / 100);
+  const bestSkinPrice = bestDropPrice * (0.85 + (h % 15) / 100);
+  const spent = opened * (2.1 + (h % 8) / 10);
+  const won = spent * (0.75 + (h % 40) / 100);
+  const stats = {
+    opened,
+    spent,
+    won,
+    bestDrop: { weapon: drop[0], name: drop[1], price: bestDropPrice },
+    knives: h % 4,
+    gloves: (h >> 3) % 3,
+    battles: 5 + (h % 40),
+    battlesWon: 2 + (h % 20),
+    upgrades: h % 25,
+    upgradesWon: (h >> 2) % 12,
+  };
+  return {
+    key: "bot-" + name,
+    profile,
+    inventory: [],
+    stats,
+    isMe: false,
+    isBot: true,
+    opened,
+    money,
+    xp,
+    bestDrop: {
+      label: `${drop[0]} | ${drop[1]}`,
+      value: bestDropPrice,
+      item: stats.bestDrop,
+    },
+    bestSkin: {
+      label: `${drop[0]} | ${drop[1]}`,
+      value: bestSkinPrice,
+      item: { weapon: drop[0], name: drop[1], price: bestSkinPrice },
+    },
+  };
+}
+
+function mergeCommunityPlayers(entries) {
+  const names = new Set(entries.map((e) => (e.profile.name || "").toLowerCase()));
+  const meName = (typeof currentUser === "function" && currentUser()?.name || "").toLowerCase();
+  const botNames = window.STEPCASES_BOT_NAMES || [];
+  for (const name of botNames) {
+    const key = name.toLowerCase();
+    if (key === meName || names.has(key)) continue;
+    entries.push(botLeaderboardEntry(name));
+    names.add(key);
+  }
+  return entries;
+}
+
+function safeEntryFromProfile(row, isMe) {
+  try {
+    return entryFromProfile(row, isMe);
+  } catch (e) {
+    console.warn("Leaderboard: skip profile", row?.id, e);
+    return null;
+  }
+}
+
 async function fetchEntries() {
   if (useCloud()) {
     try {
       const rows = await dbFetchLeaderboard();
       const me = authUserId();
-      const entries = rows.map((r) => entryFromProfile(r, r.id === me));
+      const entries = rows
+        .map((r) => safeEntryFromProfile(r, r.id === me))
+        .filter(Boolean);
       const guest = guestEntry();
       if (guest) entries.push(guest);
-      return entries;
+      return mergeCommunityPlayers(entries);
     } catch (e) {
       console.error("Leaderboard fetch failed:", e);
-      return guestEntry() ? [guestEntry()] : [];
+      const fallback = [];
+      const guest = guestEntry();
+      if (guest) fallback.push(guest);
+      return mergeCommunityPlayers(fallback);
     }
   }
 
@@ -79,7 +165,7 @@ async function fetchEntries() {
     let save = null;
     try { save = JSON.parse(localStorage.getItem("arena-save-" + key)); } catch (e) { /* ignore */ }
     if (!save) continue;
-    entries.push(entryFromProfile({
+    const entry = safeEntryFromProfile({
       id: key,
       username: user.name,
       avatar_emoji: user.avatarEmoji,
@@ -89,11 +175,12 @@ async function fetchEntries() {
       stats: save.stats,
       xp: save.xp,
       created_at: new Date(user.created).toISOString(),
-    }, reg.current === key));
+    }, reg.current === key);
+    if (entry) entries.push(entry);
   }
   const guest = guestEntry();
   if (guest) entries.push(guest);
-  return entries;
+  return mergeCommunityPlayers(entries);
 }
 
 const LB_CONFIG = {

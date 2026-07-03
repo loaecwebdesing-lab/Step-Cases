@@ -768,3 +768,7 @@ $("#btn-loot-keep").addEventListener("click", lootKeepRemaining);
 $("#battle-modal").addEventListener("click", (e) => {
   if (e.target === $("#battle-modal")) lootKeepRemaining();
 });
+
+window.STEPCASES_BOT_NAMES = BOT_NAMES;
+window.STEPCASES_botHash = botHash;
+window.STEPCASES_botProfile = botProfile;
