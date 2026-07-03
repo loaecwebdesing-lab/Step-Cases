@@ -98,6 +98,14 @@ async function dbEnsureProfile(userId, meta = {}) {
   const client = getClient();
   if (!client || !userId) return null;
 
+  const { error: rpcError } = await client.rpc("sync_my_profile", {
+    p_username: meta.username || null,
+    p_avatar_emoji: meta.avatar_emoji || "🦊",
+    p_avatar_color: meta.avatar_color || "#ff6b35",
+  });
+  if (!rpcError) return { id: userId };
+  console.warn("sync_my_profile RPC failed, trying direct insert:", rpcError.message);
+
   const { data: existing, error: readErr } = await client
     .from("profiles")
     .select("id")
@@ -119,6 +127,19 @@ async function dbEnsureProfile(userId, meta = {}) {
     throw error;
   }
   return { id: userId };
+}
+
+async function dbSyncMyProfile() {
+  const user = typeof currentUser === "function" ? currentUser() : null;
+  if (!user || !cloudEnabled()) return;
+  const client = getClient();
+  if (!client) return;
+  const { error } = await client.rpc("sync_my_profile", {
+    p_username: user.name,
+    p_avatar_emoji: user.avatarEmoji,
+    p_avatar_color: user.avatarColor,
+  });
+  if (error) console.warn("dbSyncMyProfile:", error.message);
 }
 
 function profileMetaFromAuthUser(user) {
@@ -143,7 +164,17 @@ async function dbUpsertProfile(userId, patch) {
 }
 
 async function dbSaveGameState(userId, gameState) {
-  await dbUpsertProfile(userId, stateToRow(gameState));
+  const client = getClient();
+  const user = typeof currentUser === "function" ? currentUser() : null;
+  const row = stateToRow(gameState);
+  const { error } = await client.from("profiles").upsert({
+    id: userId,
+    username: user?.name || "Player",
+    avatar_emoji: user?.avatarEmoji || "🦊",
+    avatar_color: user?.avatarColor || "#ff6b35",
+    ...row,
+  }, { onConflict: "id" });
+  if (error) throw error;
 }
 
 function scheduleCloudSave(userId, gameState) {

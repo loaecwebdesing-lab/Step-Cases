@@ -126,6 +126,42 @@ $$;
 revoke all on function public.get_leaderboard() from public;
 grant execute on function public.get_leaderboard() to anon, authenticated;
 
+create or replace function public.sync_my_profile(
+  p_username text default null,
+  p_avatar_emoji text default '🦊',
+  p_avatar_color text default '#ff6b35'
+)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  uid uuid := auth.uid();
+  uname text;
+begin
+  if uid is null then
+    return;
+  end if;
+  select coalesce(
+    nullif(trim(p_username), ''),
+    u.raw_user_meta_data->>'username',
+    split_part(u.email, '@', 1),
+    'Player'
+  )
+  into uname
+  from auth.users u
+  where u.id = uid;
+
+  insert into public.profiles (id, username, avatar_emoji, avatar_color, balance)
+  values (uid, uname, coalesce(p_avatar_emoji, '🦊'), coalesce(p_avatar_color, '#ff6b35'), 10)
+  on conflict (id) do nothing;
+end;
+$$;
+
+revoke all on function public.sync_my_profile(text, text, text) from public;
+grant execute on function public.sync_my_profile(text, text, text) to authenticated;
+
 -- Backfill profiles for accounts created before the trigger existed
 insert into public.profiles (id, username, avatar_emoji, avatar_color, balance)
 select

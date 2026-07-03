@@ -72,6 +72,7 @@ async function fetchEntries() {
 
   if (useCloud()) {
     try {
+      if (isLoggedIn()) await dbSyncMyProfile();
       const rows = await dbFetchLeaderboard();
       cloudTotal = rows.length;
       const me = authUserId();
@@ -234,13 +235,17 @@ async function renderLeaderboard() {
   _lbCache = entries;
 
   let hint = "";
-  if (useCloud()) {
+  if (!useCloud()) {
+    hint = '<p class="empty-msg small lb-hint">⚠️ Mode local — les comptes ne sont visibles que sur ce navigateur. Configure <code>SUPABASE_URL</code> et <code>SUPABASE_ANON_KEY</code> sur Netlify.</p>';
+  } else if (useCloud()) {
     if (cloudError) {
-      hint = '<p class="empty-msg small lb-hint">⚠️ Could not load all players — run <code>supabase/fix-leaderboard.sql</code> in Supabase SQL Editor.</p>';
+      hint = '<p class="empty-msg small lb-hint">⚠️ Impossible de charger les joueurs — exécute <code>supabase/fix-leaderboard.sql</code> dans Supabase SQL Editor.</p>';
     } else if (cloudTotal === 0 && isLoggedIn()) {
-      hint = '<p class="empty-msg small lb-hint">⚠️ Your profile is syncing — log out and log back in once. Friends must also have an account.</p>';
-    } else if (cloudTotal > 0) {
-      hint = `<p class="empty-msg small lb-hint">${cloudTotal} registered player${cloudTotal > 1 ? "s" : ""}</p>`;
+      hint = '<p class="empty-msg small lb-hint">⚠️ Profil non synchronisé — déconnecte-toi, reconnecte-toi, puis ré-exécute le SQL Supabase.</p>';
+    } else if (cloudTotal === 1) {
+      hint = '<p class="empty-msg small lb-hint">1 joueur enregistré. Les autres doivent créer un compte et se connecter au moins une fois.</p>';
+    } else if (cloudTotal > 1) {
+      hint = `<p class="empty-msg small lb-hint">${cloudTotal} joueurs enregistrés</p>`;
     }
   }
 
