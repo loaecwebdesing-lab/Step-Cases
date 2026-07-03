@@ -237,8 +237,8 @@ async function renderLeaderboard() {
   if (useCloud()) {
     if (cloudError) {
       hint = '<p class="empty-msg small lb-hint">⚠️ Could not load all players — run <code>supabase/fix-leaderboard.sql</code> in Supabase SQL Editor.</p>';
-    } else if (cloudTotal <= 1 && isLoggedIn()) {
-      hint = '<p class="empty-msg small lb-hint">Only registered accounts appear here. Other players must sign up on the site.</p>';
+    } else if (cloudTotal === 0 && isLoggedIn()) {
+      hint = '<p class="empty-msg small lb-hint">⚠️ Your profile is syncing — log out and log back in once. Friends must also have an account.</p>';
     } else if (cloudTotal > 0) {
       hint = `<p class="empty-msg small lb-hint">${cloudTotal} registered player${cloudTotal > 1 ? "s" : ""}</p>`;
     }

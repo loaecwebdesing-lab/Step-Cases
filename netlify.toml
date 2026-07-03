@@ -7,6 +7,11 @@
   NODE_VERSION = "20"
 
 [[headers]]
+  for = "/js/*"
+  [headers.values]
+    Cache-Control = "no-cache, no-store, must-revalidate"
+
+[[headers]]
   for = "/*"
   [headers.values]
     X-Frame-Options = "DENY"

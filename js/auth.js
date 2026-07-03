@@ -93,6 +93,7 @@ async function initAuth() {
       const session = await Promise.race([dbGetSession(), authTimeout(6000)]);
       if (session?.user) {
         try {
+          await dbEnsureProfile(session.user.id, profileMetaFromAuthUser(session.user));
           const row = await Promise.race([dbFetchProfile(session.user.id), authTimeout(6000)]);
           if (row) authUser = rowToUser(row);
           else dbSignOut().catch(() => {});

@@ -130,3 +130,16 @@ $$;
 
 revoke all on function public.get_leaderboard() from public;
 grant execute on function public.get_leaderboard() to anon, authenticated;
+
+-- ── Réparer les comptes existants sans profil ────────────────
+-- (joueurs déjà inscrits avant que le trigger soit actif)
+insert into public.profiles (id, username, avatar_emoji, avatar_color, balance)
+select
+  u.id,
+  coalesce(u.raw_user_meta_data->>'username', split_part(u.email, '@', 1)),
+  coalesce(u.raw_user_meta_data->>'avatar_emoji', '🦊'),
+  coalesce(u.raw_user_meta_data->>'avatar_color', '#ff6b35'),
+  10
+from auth.users u
+where not exists (select 1 from public.profiles p where p.id = u.id)
+on conflict (id) do nothing;

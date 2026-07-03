@@ -89,9 +89,45 @@ async function dbGetSession() {
 
 async function dbFetchProfile(userId) {
   const client = getClient();
-  const { data, error } = await client.from("profiles").select("*").eq("id", userId).single();
+  const { data, error } = await client.from("profiles").select("*").eq("id", userId).maybeSingle();
   if (error) throw error;
   return data;
+}
+
+async function dbEnsureProfile(userId, meta = {}) {
+  const client = getClient();
+  if (!client || !userId) return null;
+
+  const { data: existing, error: readErr } = await client
+    .from("profiles")
+    .select("id")
+    .eq("id", userId)
+    .maybeSingle();
+  if (readErr) throw readErr;
+  if (existing) return existing;
+
+  const username = String(meta.username || "Player").trim() || "Player";
+  const { error } = await client.from("profiles").insert({
+    id: userId,
+    username,
+    avatar_emoji: meta.avatar_emoji || "🦊",
+    avatar_color: meta.avatar_color || "#ff6b35",
+    balance: START_BALANCE,
+  });
+  if (error) {
+    if (error.code === "23505") return { id: userId };
+    throw error;
+  }
+  return { id: userId };
+}
+
+function profileMetaFromAuthUser(user) {
+  if (!user) return {};
+  return {
+    username: user.user_metadata?.username || user.email?.split("@")[0] || "Player",
+    avatar_emoji: user.user_metadata?.avatar_emoji,
+    avatar_color: user.user_metadata?.avatar_color,
+  };
 }
 
 async function dbFetchProfileByUsername(username) {
@@ -172,6 +208,11 @@ async function dbSignUp(username, password, avatarEmoji, avatarColor) {
   });
   if (error) throw error;
   if (!data.user) throw new Error("SIGNUP_FAILED");
+  await dbEnsureProfile(data.user.id, {
+    username: username.trim(),
+    avatar_emoji: avatarEmoji,
+    avatar_color: avatarColor,
+  });
   return data;
 }
 
@@ -182,6 +223,13 @@ async function dbSignIn(username, password) {
     password,
   });
   if (error) throw error;
+  if (data.user) {
+    await dbEnsureProfile(data.user.id, {
+      username: username.trim(),
+      avatar_emoji: data.user.user_metadata?.avatar_emoji,
+      avatar_color: data.user.user_metadata?.avatar_color,
+    });
+  }
   return data;
 }
 
