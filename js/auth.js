@@ -53,6 +53,10 @@ function levelFromXp(xp) {
   return Math.floor(Math.pow((xp || 0) / 80, 1 / 1.55)) + 1;
 }
 
+function levelUpBonus(lvl) {
+  return Math.min(lvl * 2, 10);
+}
+
 function xpForLevel(lvl) {
   return Math.ceil(80 * Math.pow(lvl - 1, 1.55));
 }

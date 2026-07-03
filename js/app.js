@@ -54,8 +54,11 @@ function addXp(amount) {
   state.xp = +(state.xp + amount).toFixed(1);
   const after = levelFromXp(state.xp);
   if (after > before) {
-    toast(`🎉 LEVEL ${after} reached! +$${(after * 2).toFixed(2)} bonus`);
-    state.balance = +(state.balance + after * 2).toFixed(2);
+    for (let lvl = before + 1; lvl <= after; lvl++) {
+      const bonus = levelUpBonus(lvl);
+      state.balance = +(state.balance + bonus).toFixed(2);
+      toast(`🎉 LEVEL ${lvl} reached! +${fmt(bonus)} bonus`);
+    }
     winSound("classified");
   }
   renderUserChip();
