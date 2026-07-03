@@ -57,78 +57,6 @@ function guestEntry() {
   };
 }
 
-const BOT_DROP_NAMES = [
-  ["AK-47", "Redline", 42],
-  ["AWP", "Asiimov", 88],
-  ["M4A4", "Neo-Noir", 35],
-  ["Desert Eagle", "Printstream", 62],
-  ["USP-S", "Kill Confirmed", 54],
-  ["Glock-18", "Fade", 420],
-  ["Karambit", "Doppler", 890],
-  ["Butterfly Knife", "Fade", 1200],
-];
-
-function botLeaderboardEntry(name) {
-  const hash = window.STEPCASES_botHash || (() => 0);
-  const profileFn = window.STEPCASES_botProfile || ((n) => ({ name: n, avatarEmoji: "🤖", avatarColor: "#8a91ad" }));
-  const h = hash(name);
-  const profile = profileFn(name);
-  const opened = 80 + (h % 2200);
-  const money = 12 + (h % 4500) / 10;
-  const xp = Math.floor(opened * (3.2 + (h % 5) / 10) + (h % 800));
-  const drop = BOT_DROP_NAMES[h % BOT_DROP_NAMES.length];
-  const bestDropPrice = drop[2] * (1 + (h % 30) / 100);
-  const bestSkinPrice = bestDropPrice * (0.85 + (h % 15) / 100);
-  const spent = opened * (2.1 + (h % 8) / 10);
-  const won = spent * (0.75 + (h % 40) / 100);
-  const stats = {
-    opened,
-    spent,
-    won,
-    bestDrop: { weapon: drop[0], name: drop[1], price: bestDropPrice },
-    knives: h % 4,
-    gloves: (h >> 3) % 3,
-    battles: 5 + (h % 40),
-    battlesWon: 2 + (h % 20),
-    upgrades: h % 25,
-    upgradesWon: (h >> 2) % 12,
-  };
-  return {
-    key: "bot-" + name,
-    profile,
-    inventory: [],
-    stats,
-    isMe: false,
-    isBot: true,
-    opened,
-    money,
-    xp,
-    bestDrop: {
-      label: `${drop[0]} | ${drop[1]}`,
-      value: bestDropPrice,
-      item: stats.bestDrop,
-    },
-    bestSkin: {
-      label: `${drop[0]} | ${drop[1]}`,
-      value: bestSkinPrice,
-      item: { weapon: drop[0], name: drop[1], price: bestSkinPrice },
-    },
-  };
-}
-
-function mergeCommunityPlayers(entries) {
-  const names = new Set(entries.map((e) => (e.profile.name || "").toLowerCase()));
-  const meName = (typeof currentUser === "function" && currentUser()?.name || "").toLowerCase();
-  const botNames = window.STEPCASES_BOT_NAMES || [];
-  for (const name of botNames) {
-    const key = name.toLowerCase();
-    if (key === meName || names.has(key)) continue;
-    entries.push(botLeaderboardEntry(name));
-    names.add(key);
-  }
-  return entries;
-}
-
 function safeEntryFromProfile(row, isMe) {
   try {
     return entryFromProfile(row, isMe);
@@ -139,22 +67,27 @@ function safeEntryFromProfile(row, isMe) {
 }
 
 async function fetchEntries() {
+  let cloudTotal = 0;
+  let cloudError = null;
+
   if (useCloud()) {
     try {
       const rows = await dbFetchLeaderboard();
+      cloudTotal = rows.length;
       const me = authUserId();
       const entries = rows
         .map((r) => safeEntryFromProfile(r, r.id === me))
         .filter(Boolean);
       const guest = guestEntry();
       if (guest) entries.push(guest);
-      return mergeCommunityPlayers(entries);
+      return { entries, cloudTotal, cloudError: null };
     } catch (e) {
       console.error("Leaderboard fetch failed:", e);
+      cloudError = e.message || "fetch failed";
       const fallback = [];
       const guest = guestEntry();
       if (guest) fallback.push(guest);
-      return mergeCommunityPlayers(fallback);
+      return { entries: fallback, cloudTotal: 0, cloudError };
     }
   }
 
@@ -180,7 +113,7 @@ async function fetchEntries() {
   }
   const guest = guestEntry();
   if (guest) entries.push(guest);
-  return mergeCommunityPlayers(entries);
+  return { entries, cloudTotal: 0, cloudError: null };
 }
 
 const LB_CONFIG = {
@@ -293,19 +226,31 @@ async function renderLeaderboard() {
   $("#lb-list").innerHTML = '<p class="empty-msg">Loading leaderboard…</p>';
 
   const cfg = LB_CONFIG[lbCategory];
-  const entries = (await fetchEntries())
+  const { entries: rawEntries, cloudTotal, cloudError } = await fetchEntries();
+  const entries = rawEntries
     .sort((a, b) => cfg.get(b) - cfg.get(a))
     .slice(0, 25);
 
   _lbCache = entries;
 
+  let hint = "";
+  if (useCloud()) {
+    if (cloudError) {
+      hint = '<p class="empty-msg small lb-hint">⚠️ Could not load all players — run <code>supabase/fix-leaderboard.sql</code> in Supabase SQL Editor.</p>';
+    } else if (cloudTotal <= 1 && isLoggedIn()) {
+      hint = '<p class="empty-msg small lb-hint">Only registered accounts appear here. Other players must sign up on the site.</p>';
+    } else if (cloudTotal > 0) {
+      hint = `<p class="empty-msg small lb-hint">${cloudTotal} registered player${cloudTotal > 1 ? "s" : ""}</p>`;
+    }
+  }
+
   if (!entries.length) {
-    $("#lb-list").innerHTML = '<p class="empty-msg">No players yet — create an account to appear on the leaderboard!</p>';
+    $("#lb-list").innerHTML = hint + '<p class="empty-msg">No players yet — create an account to appear on the leaderboard!</p>';
     return;
   }
 
   const medals = ["🥇", "🥈", "🥉"];
-  $("#lb-list").innerHTML = entries
+  $("#lb-list").innerHTML = hint + entries
     .map((e, i) => `
       <div class="lb-row clickable ${i < 3 ? "podium podium-" + (i + 1) : ""} ${e.isMe ? "me" : ""}" data-lb-idx="${i}" title="View profile">
         <span class="lb-rank">${medals[i] || "#" + (i + 1)}</span>

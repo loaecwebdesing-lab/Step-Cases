@@ -137,6 +137,11 @@ async function dbFlushSave() {
 async function dbFetchLeaderboard() {
   const client = getClient();
   if (!client) return [];
+
+  const { data: rpcData, error: rpcError } = await client.rpc("get_leaderboard");
+  if (!rpcError && Array.isArray(rpcData)) return rpcData;
+  if (rpcError) console.warn("Leaderboard RPC failed, fallback to direct query:", rpcError.message);
+
   const { data, error } = await client
     .from("profiles")
     .select("id, username, avatar_emoji, avatar_color, balance, inventory, stats, xp, created_at")

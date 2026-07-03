@@ -89,3 +89,39 @@ create policy "Users can update own profile"
 grant usage on schema public to anon, authenticated;
 grant select on table public.profiles to anon, authenticated;
 grant insert, update on table public.profiles to authenticated;
+
+-- Public leaderboard RPC (bypasses RLS misconfiguration)
+create or replace function public.get_leaderboard()
+returns table (
+  id uuid,
+  username text,
+  avatar_emoji text,
+  avatar_color text,
+  balance numeric,
+  inventory jsonb,
+  stats jsonb,
+  xp numeric,
+  created_at timestamptz
+)
+language sql
+security definer
+stable
+set search_path = public
+as $$
+  select
+    p.id,
+    p.username,
+    p.avatar_emoji,
+    p.avatar_color,
+    p.balance,
+    p.inventory,
+    p.stats,
+    p.xp,
+    p.created_at
+  from public.profiles p
+  order by p.balance desc
+  limit 100;
+$$;
+
+revoke all on function public.get_leaderboard() from public;
+grant execute on function public.get_leaderboard() to anon, authenticated;
