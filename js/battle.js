@@ -519,97 +519,56 @@ async function runBattle(opts) {
     await sleep(900);
   }
 
-  finishBattle(players, info, battleCases);
+  finishBattle(players, info);
 }
 
-/* Partage équitable par valeur (pas round-robin sur les skins chers) */
-function partitionFair(items, count) {
-  const piles = Array.from({ length: count }, () => ({ items: [], total: 0 }));
-  if (!items.length || count < 1) return piles;
+/* Sélectionne des skins dont la valeur totale est la plus proche de la part équitable */
+function pickSubsetNearValue(items, target) {
+  if (!items.length) return [];
+  if (items.length === 1) return [...items];
 
-  const total = items.reduce((s, d) => s + d.price, 0);
-  const target = total / count;
-  const sorted = [...items].sort((a, b) => b.price - a.price);
+  const unit = 100;
+  const targetU = Math.round(target * unit);
+  const vals = items.map((it) => Math.round(it.price * unit));
+  const maxSum = vals.reduce((a, b) => a + b, 0);
 
-  for (const item of sorted) {
-    let bestIdx = 0;
-    let bestScore = Infinity;
-    for (let i = 0; i < count; i++) {
-      const after = piles[i].total + item.price;
-      const score =
-        Math.abs(after - target) +
-        (after > target * 1.2 ? (after - target * 1.2) * 2.5 : 0) +
-        (item.price > target * 1.25 && piles[i].total < target * 0.35 ? (target - piles[i].total) * 0.5 : 0);
-      if (score < bestScore) {
-        bestScore = score;
-        bestIdx = i;
+  const dp = new Array(maxSum + 1).fill(null);
+  dp[0] = [];
+
+  for (let i = 0; i < items.length; i++) {
+    const v = vals[i];
+    for (let s = maxSum; s >= v; s--) {
+      if (dp[s - v] !== null && dp[s] === null) {
+        dp[s] = dp[s - v].concat(i);
       }
     }
-    piles[bestIdx].items.push(item);
-    piles[bestIdx].total = +(piles[bestIdx].total + item.price).toFixed(2);
   }
 
-  for (let pass = 0; pass < 40; pass++) {
-    let hi = 0;
-    let lo = 0;
-    for (let i = 1; i < count; i++) {
-      if (piles[i].total > piles[hi].total) hi = i;
-      if (piles[i].total < piles[lo].total) lo = i;
+  let best = 0;
+  let bestDiff = Infinity;
+  for (let s = 0; s <= maxSum; s++) {
+    if (dp[s] === null) continue;
+    const diff = Math.abs(s - targetU);
+    if (diff < bestDiff) {
+      bestDiff = diff;
+      best = s;
     }
-    if (piles[hi].total - piles[lo].total < target * 0.35) break;
-
-    let swapped = false;
-    for (const big of [...piles[hi].items].sort((a, b) => b.price - a.price)) {
-      for (const small of [...piles[lo].items].sort((a, b) => a.price - b.price)) {
-        if (big.price <= small.price) continue;
-        const newHi = piles[hi].total - big.price + small.price;
-        const newLo = piles[lo].total - small.price + big.price;
-        const oldSpread = Math.abs(piles[hi].total - target) + Math.abs(piles[lo].total - target);
-        const newSpread = Math.abs(newHi - target) + Math.abs(newLo - target);
-        if (newSpread < oldSpread - 0.01) {
-          piles[hi].items = piles[hi].items.filter((x) => x.id !== big.id).concat(small);
-          piles[lo].items = piles[lo].items.filter((x) => x.id !== small.id).concat(big);
-          piles[hi].total = +newHi.toFixed(2);
-          piles[lo].total = +newLo.toFixed(2);
-          swapped = true;
-          break;
-        }
-      }
-      if (swapped) break;
-    }
-    if (!swapped) break;
   }
 
-  return piles;
+  const picked = (dp[best] || []).map((i) => items[i]);
+  if (picked.length) return picked;
+
+  return [items.reduce((a, b) => (Math.abs(a.price - target) <= Math.abs(b.price - target) ? a : b))];
 }
 
-/* Si la part est trop basse (gros skin indivisible), complète avec des drops de rechange */
-function compensateShortPile(pile, target, casePool) {
-  if (!casePool?.length || pile.total >= target * 0.78) return;
-
-  let attempts = 0;
-  while (pile.total < target * 0.78 && attempts < 12) {
-    attempts++;
-    const need = target - pile.total;
-    const c = casePool[Math.floor(Math.random() * casePool.length)];
-    const sub = rollDrop(c);
-    sub.id = "battle-sub-" + Date.now() + "-" + Math.random().toString(36).slice(2, 7);
-    if (sub.price > need * 1.6 && pile.items.length > 0) continue;
-    if (sub.price > target * 1.1) continue;
-    pile.items.push(sub);
-    pile.total = +(pile.total + sub.price).toFixed(2);
-  }
+function fairShareLoot(allDrops, shareCount) {
+  if (!allDrops.length || shareCount < 1) return [];
+  const total = allDrops.reduce((s, d) => s + d.price, 0);
+  const target = total / shareCount;
+  return pickSubsetNearValue(allDrops, target);
 }
 
-function splitItems(items, rank, count, casePool) {
-  if (!items.length || count < 1) return [];
-  const target = items.reduce((s, d) => s + d.price, 0) / count;
-  const piles = partitionFair(items, count);
-  compensateShortPile(piles[rank], target, casePool);
-  return piles[rank].items;
-}
-
-function finishBattle(players, info, battleCases) {
+function finishBattle(players, info) {
   const allDrops = players.flatMap((p) => p.drops);
   const totalValue = +allDrops.reduce((s, d) => s + d.price, 0).toFixed(2);
   let resultHTML = "";
@@ -617,11 +576,11 @@ function finishBattle(players, info, battleCases) {
   let userWon = false;
 
   if (battleCfg.mode === "sharing") {
-    userItems = splitItems(allDrops, 0, players.length, battleCases);
+    userItems = fairShareLoot(allDrops, players.length);
     userWon = true;
     const shareVal = +userItems.reduce((s, d) => s + d.price, 0).toFixed(2);
     const fairShare = +(totalValue / players.length).toFixed(2);
-    resultHTML = `🤝 SHARING — your fair share: <b>${fmt(shareVal)}</b> (~${fmt(fairShare)} per player from ${fmt(totalValue)} total)`;
+    resultHTML = `🤝 SHARING — your fair share: <b>${fmt(shareVal)}</b> (${fmt(fairShare)} per player from ${fmt(totalValue)} total)`;
     players.forEach((_, i) => $(`#bp-${i}`).classList.add("winner"));
   } else if (info.teams) {
     const totals = info.teams.map((team) => team.reduce((s, i) => s + players[i].total, 0));
@@ -631,11 +590,11 @@ function finishBattle(players, info, battleCases) {
     const winners = info.teams[bestTeam];
     winners.forEach((i) => $(`#bp-${i}`).classList.add("winner"));
     if (winners.some((i) => players[i].isUser)) {
-      userItems = splitItems(allDrops, 0, winners.length, battleCases);
+      userItems = fairShareLoot(allDrops, winners.length);
       userWon = true;
       const shareVal = +userItems.reduce((s, d) => s + d.price, 0).toFixed(2);
       const fairShare = +(totalValue / winners.length).toFixed(2);
-      resultHTML = `🏆 YOUR TEAM WINS ${battleCfg.mode === "fou" ? "(Crazy Mode!)" : ""} — shared loot: <b>${fmt(shareVal)}</b> (~${fmt(fairShare)} each)`;
+      resultHTML = `🏆 YOUR TEAM WINS ${battleCfg.mode === "fou" ? "(Crazy Mode!)" : ""} — shared loot: <b>${fmt(shareVal)}</b> (${fmt(fairShare)} each)`;
     } else {
       resultHTML = `💀 Team ${bestTeam === 0 ? "A" : "B"} wins… You leave empty-handed.`;
     }
